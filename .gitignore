@@ -1,0 +1,39 @@
+# Archivos compilados
+*.class
+
+# Carpetas de compilación
+/bin/
+/build/
+/target/
+/out/
+
+# Logs
+*.log
+
+# Archivos temporales
+*.tmp
+*.swp
+
+# Archivos del sistema
+.DS_Store
+Thumbs.db
+
+# IDE IntelliJ
+.idea/
+*.iml
+
+# IDE Eclipse
+.project
+.classpath
+.settings/
+
+# IDE NetBeans
+nbproject/private/
+build/
+dist/
+nbbuild/
+nbdist/
+.nb-gradle/
+
+# VS Code
+.vscode/
