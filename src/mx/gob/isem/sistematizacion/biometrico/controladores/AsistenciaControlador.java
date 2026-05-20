@@ -9,9 +9,13 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
+import javax.swing.JOptionPane;
+import javax.swing.SwingUtilities;
 import javax.xml.datatype.DatatypeConfigurationException;
 import javax.xml.datatype.DatatypeFactory;
 import javax.xml.datatype.XMLGregorianCalendar;
+import javax.xml.ws.WebServiceException;
+import javax.xml.ws.soap.SOAPFaultException;
 
 import mx.gob.isem.sistematizacion.biometrico.Attendance;
 import mx.gob.isem.sistematizacion.biometrico.InstanciaBiometrico;
@@ -23,6 +27,7 @@ import mx.gob.isem.sistematizacion.biometrico.modelos.Biometrico;
 import mx.gob.isem.sistematizacion.biometrico.modelos.EmpleadoLocal;
 import mx.gob.isem.sistematizacion.biometrico.utilidades.FuncionesRepetidas;
 import mx.gob.isem.sistematizacion.biometrico.vistas.VistaPrincipal;
+import mx.gob.isem.sistematizacion.biometrico.ws.ClienteSistematizacionWS;
 import mx.gob.isem.sistematizacion.biometrico.ws.cliente.Asistencia;
 import mx.gob.isem.sistematizacion.biometrico.ws.cliente.BiometricosPortType;
 import mx.gob.isem.sistematizacion.biometrico.ws.cliente.ListaAsistencias;
@@ -36,16 +41,18 @@ public class AsistenciaControlador {
 	private AsistenciaDAO asistenciaDao;
 	private BiometricoDAO biometricoDao;
 	private EmpleadoBiometricoDAO empleadoBiometricoDao;
-	private BiometricosPortType servicio;
+	private ClienteSistematizacionWS clienteWS;
 	private ObjectFactory factory;
+	private VistaPrincipal vista;
 	
-	public AsistenciaControlador(VistaPrincipal vista, List<InstanciaBiometrico> dispositivos, BiometricosPortType servicio) {
+	public AsistenciaControlador(VistaPrincipal vista, List<InstanciaBiometrico> dispositivos, ClienteSistematizacionWS clienteWs) {
 		this.dispositivos = dispositivos;
 		this.asistenciaDao = new AsistenciaDAO();
 		this.biometricoDao = new BiometricoDAO();
 		this.empleadoBiometricoDao = new EmpleadoBiometricoDAO();
+		this.clienteWS = clienteWs;
 		this.factory = new ObjectFactory();
-		this.servicio = servicio;
+		this.vista = vista;
 		inicializarEventos();
 	}
 	
@@ -130,6 +137,7 @@ public class AsistenciaControlador {
 				}
                 peticion.setAsistencias(asistenciasParametro);
                 // Consumo del Web Service
+                BiometricosPortType servicio = clienteWS.obtenerPuerto();
                 SincronizarAsistenciasResponse respuesta = servicio.sincronizarAsistencias(peticion);
                 if (respuesta.isExito()) {                                      
                     // Actualizamos las asistencias como sincronizadas
@@ -137,23 +145,43 @@ public class AsistenciaControlador {
                 	if (actualizadas) {
                         // Borramos las asistencias sincronizadas
                         asistenciaDao.borrarAsistencias();
-                        sincronizacionExitosa = true;
-                        System.out.println("Limpieza local finalizada. Sincronización 100% completada.");
+                        sincronizacionExitosa = true;                        
                     } else {
                         System.err.println("Error al actualizar la BD local tras sincronizar.");
                         esperarParaReintento();
                     }
                 } else {
-                    System.err.println("El servidor central rechazó el lote. (Revisar logs en Toluca)");
                     esperarParaReintento();
                 }
-            } catch (Exception e) {
-                System.err.println("Error de red al conectar con el Web Service: " + e.getMessage());
-                esperarParaReintento();
+            } catch (SOAPFaultException soapEx) {
+	    		// Error en las credenciales de la API
+	    		// Checar en la Base de datos local
+	    		SwingUtilities.invokeLater(() -> {
+		    		JOptionPane.showMessageDialog(vista, 
+	                        "Fallo en recolección nocturna:\nAcceso Denegado por el Servidor Central.\nRevise las credenciales de conexión en la configuración.", 
+	                        "Error de Credenciales", JOptionPane.ERROR_MESSAGE);
+	    		});
+	    		break;	    		
+	    	} catch (WebServiceException redEx) {
+	    		// Error al conectar con la red
+	            SwingUtilities.invokeLater(() -> {
+		    		JOptionPane.showMessageDialog(vista, 
+	                        "Fallo en recolección nocturna:\nError de Red.\nReintentando en 5 minutos.", 
+	                        "Error de Red", JOptionPane.ERROR_MESSAGE);
+	    		});
+	            esperarParaReintento();
+	        } catch (Exception e) {
+                System.err.println("Error de lógica interna al procesar las asistencias: " + e.getMessage());
+                break;
             }
         }
         if (!sincronizacionExitosa) {
             System.err.println("Se alcanzó el límite máximo de intentos de sincronización. Quedarán pendientes para mañana.");
+            SwingUtilities.invokeLater(() -> {
+	    		JOptionPane.showMessageDialog(vista, 
+                        "Fallo en recolección nocturna:\nLímite de intentos alcanzado.\nSe reintentará el día de mañana.", 
+                        "Error de Sincronización", JOptionPane.ERROR_MESSAGE);
+    		});
         }
     }
 

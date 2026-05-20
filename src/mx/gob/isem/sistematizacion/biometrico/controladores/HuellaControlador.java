@@ -6,6 +6,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import javax.swing.JOptionPane;
+import javax.xml.ws.WebServiceException;
+import javax.xml.ws.soap.SOAPFaultException;
+
 import mx.gob.isem.sistematizacion.biometrico.InstanciaBiometrico;
 import mx.gob.isem.sistematizacion.biometrico.User;
 import mx.gob.isem.sistematizacion.biometrico.utilidades.FuncionesRepetidas;
@@ -20,6 +23,7 @@ import mx.gob.isem.sistematizacion.biometrico.modelos.EmpleadoBiometrico;
 import mx.gob.isem.sistematizacion.biometrico.modelos.HuellaLocal;
 import mx.gob.isem.sistematizacion.biometrico.utilidades.GestorDialogosUI;
 import mx.gob.isem.sistematizacion.biometrico.vistas.VistaPrincipal;
+import mx.gob.isem.sistematizacion.biometrico.ws.ClienteSistematizacionWS;
 import mx.gob.isem.sistematizacion.biometrico.ws.cliente.BiometricosPortType;
 import mx.gob.isem.sistematizacion.biometrico.ws.cliente.Huella;
 import mx.gob.isem.sistematizacion.biometrico.ws.cliente.SincronizarHuellaRequest;
@@ -32,16 +36,16 @@ public class HuellaControlador {
     private HuellaDAO huellaDao;
     private BiometricoDAO biometricoDao;
     private EmpleadoBiometricoDAO empleadoBiometricoDao;
-    private BiometricosPortType servicio;
+    private ClienteSistematizacionWS clienteWS;
 	
-	public HuellaControlador(VistaPrincipal vista, List<InstanciaBiometrico> dispositivos, BiometricosPortType servicio) {
+	public HuellaControlador(VistaPrincipal vista, List<InstanciaBiometrico> dispositivos, ClienteSistematizacionWS clienteWS) {
 		this.vista = vista;
 		this.dispositivos = dispositivos;
 		this.empleadoDao = new EmpleadoDAO();
         this.huellaDao = new HuellaDAO();
         this.biometricoDao = new BiometricoDAO();
         this.empleadoBiometricoDao = new EmpleadoBiometricoDAO();
-        this.servicio = servicio;
+        this.clienteWS = clienteWS;
 		inicializarEventos();
 	}
 	
@@ -74,7 +78,7 @@ public class HuellaControlador {
 	                if (biometricoSeleccionado != null) {
 	                    HuellaLocal huella = editarHuella(empleado, biometricoSeleccionado);
 	                    if (huella != null) {
-                            System.out.println("Enviando nueva plantilla biométrica a Toluca...");
+                            System.out.println("Enviando nueva plantilla biométrica a Servidor Central...");
                             boolean exitoServidor = enviarHuellaAlServidor(huella);	                    
 		                    if (exitoServidor) {
 	                            JOptionPane.showMessageDialog(vista, 
@@ -82,7 +86,7 @@ public class HuellaControlador {
 	                    		    "Éxito", JOptionPane.INFORMATION_MESSAGE);
 	                        } else {
 	                            JOptionPane.showMessageDialog(vista, 
-	                    		    "La huella se guardó en los equipos de la clínica, pero hubo un error de red con el Servidor Central.", 
+	                    		    "La huella se guardó en los equipos del centro, pero hubo un error de red con el Servidor Central.", 
 	                    		    "Aviso de Red", JOptionPane.WARNING_MESSAGE);
 	                        }
 	                    }
@@ -141,26 +145,36 @@ public class HuellaControlador {
 				huellaCentral.setIdEmpleado(huellaLocal.getEmpleado().getId());
 				huellaCentral.setIndice(huellaLocal.getIndice());
 				huellaCentral.setTemplate(huellaLocal.getTemplate());
-				request.setHuella(huellaCentral);
+				request.setHuella(huellaCentral);				
+				BiometricosPortType servicio = clienteWS.obtenerPuerto();				
 				SincronizarHuellaResponse response = servicio.sincronizarHuella(request);
 				if (Boolean.TRUE.equals(response.isProcesada())) {
 					return true;
-				} 
-	    	} catch (javax.xml.ws.WebServiceException redEx) {
-	            System.err.println("Error de red al conectar con el servidor central: " + redEx.getMessage());
+				}				
+	    	} catch (SOAPFaultException soapEx) {
+	    		// Error en las credenciales de la API
+	    		// Checar en la Base de datos local
+	    		JOptionPane.showMessageDialog(vista, 
+                        "Acceso Denegado por el Servidor Central.\nRevise las credenciales de conexión en la configuración.", 
+                        "Error de Credenciales", JOptionPane.ERROR_MESSAGE);
+	    		break;	    		
+	    	} catch (WebServiceException redEx) {
+	    		// Error al conectar con la red
 	            if (intentoActual < maxIntentos) {
-	                System.out.println("Reintentando envío de huella en 1 minuto...");
+	                JOptionPane.showMessageDialog(vista, 
+	                        "Error en la conexión con el servidor. Intentando de nuevo en 1 minuto", 
+	                        "Error de Red", JOptionPane.ERROR_MESSAGE);
 	                try { 
 	                	Thread.sleep(TimeUnit.MINUTES.toMillis(1)); 
 	                } catch (InterruptedException ie) { 
 	                	Thread.currentThread().interrupt(); 
 	                	break; 
 	                }
-	            } 
+	            } 	            
 	        } catch (Exception e) {
                 System.err.println("Error de lógica interna al procesar la huella: " + e.getMessage());
                 break;
-            }		
+            }
 	    }
 		return false;
 	}

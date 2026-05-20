@@ -12,17 +12,19 @@ public class ConfiguracionDAO {
 			SELECT * 
 			  FROM biometricos.configuracion
 			""";
-		Configuracion config = new Configuracion();
+		Configuracion configuracion = new Configuracion();
 		try (Connection con = ConexionBD.obtenerConexion();
 			 PreparedStatement ps = con.prepareStatement(sql);
 			 ResultSet rs = ps.executeQuery()) {
 			while(rs.next()) {
-				config.setCentro(rs.getString("Centro"));
-				config.setNombre(rs.getString("Nombre"));
+				configuracion.setCentro(rs.getString("Centro"));
+				configuracion.setNombre(rs.getString("Nombre"));
+				configuracion.setUsuario(rs.getString("Usuario"));
+				configuracion.setPassword(rs.getString("Password"));
 			}
 		} catch (Exception e) {
 			System.err.println("Error al consultar configuracion en la BD: "+e.getMessage());
 		}
-		return config;
+		return configuracion;
 	}
 }

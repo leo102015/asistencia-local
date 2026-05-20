@@ -9,7 +9,9 @@ import mx.gob.isem.sistematizacion.biometrico.controladores.EmpleadoBiometricoCo
 import mx.gob.isem.sistematizacion.biometrico.controladores.EmpleadoControlador;
 import mx.gob.isem.sistematizacion.biometrico.controladores.HuellaControlador;
 import mx.gob.isem.sistematizacion.biometrico.dao.BiometricoDAO;
+import mx.gob.isem.sistematizacion.biometrico.dao.ConfiguracionDAO;
 import mx.gob.isem.sistematizacion.biometrico.modelos.Biometrico;
+import mx.gob.isem.sistematizacion.biometrico.modelos.Configuracion;
 import mx.gob.isem.sistematizacion.biometrico.vistas.VistaPrincipal;
 import mx.gob.isem.sistematizacion.biometrico.ws.ClienteSistematizacionWS;
 import mx.gob.isem.sistematizacion.biometrico.ws.cliente.BiometricosPortType;
@@ -23,13 +25,24 @@ public class MainApp {
 	}
 	
 	
-	private static void iniciarValidacion() {
-		ClienteSistematizacionWS clienteBiometricos = new ClienteSistematizacionWS();
-		BiometricosPortType servicio = clienteBiometricos.getPuerto();
+	private static void iniciarValidacion() {				
 		new Thread(() -> {
+			ConfiguracionDAO configuracionDao = new ConfiguracionDAO();
+			Configuracion configuracion = configuracionDao.consultarConfiguracion();
+			if (configuracion == null) {
+	            SwingUtilities.invokeLater(() -> {
+	                JOptionPane.showMessageDialog(null, 
+	                    "Configuración incompleta: Faltan las credenciales del servidor central.\nEl sistema se cerrará.", 
+	                    "Error Crítico", JOptionPane.ERROR_MESSAGE);
+	                System.exit(0);
+	            });
+	            return;
+	        }
+			
+			ClienteSistematizacionWS clienteBiometricos = new ClienteSistematizacionWS();
 			BiometricoDAO dao = new BiometricoDAO();
             List<Biometrico> biometricos = dao.consultarBiometricos();
-
+            
             if (biometricos.isEmpty()) {
                 SwingUtilities.invokeLater(() -> {
                     JOptionPane.showMessageDialog(null, 
@@ -73,10 +86,10 @@ public class MainApp {
                     
                     SwingUtilities.invokeLater(() -> {
                         VistaPrincipal ventana = new VistaPrincipal();
-                        new AsistenciaControlador(ventana, dispositivosConectados, servicio);
+                        new AsistenciaControlador(ventana, dispositivosConectados, clienteBiometricos);
                         new EmpleadoBiometricoControlador(ventana, dispositivosConectados);
-                        new EmpleadoControlador(ventana, dispositivosConectados, servicio);          
-                        new HuellaControlador(ventana, dispositivosConectados, servicio);
+                        new EmpleadoControlador(ventana, dispositivosConectados, clienteBiometricos);          
+                        new HuellaControlador(ventana, dispositivosConectados, clienteBiometricos);
                         ventana.setVisible(true);
                     });
                     

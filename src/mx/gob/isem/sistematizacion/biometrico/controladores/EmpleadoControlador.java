@@ -11,8 +11,11 @@ import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-
 import javax.swing.JOptionPane;
+import javax.swing.SwingUtilities;
+import javax.xml.ws.WebServiceException;
+import javax.xml.ws.soap.SOAPFaultException;
+
 import mx.gob.isem.sistematizacion.biometrico.InstanciaBiometrico;
 import mx.gob.isem.sistematizacion.biometrico.User;
 import mx.gob.isem.sistematizacion.biometrico.dao.BiometricoDAO;
@@ -25,6 +28,7 @@ import mx.gob.isem.sistematizacion.biometrico.utilidades.GestorDialogosUI;
 import mx.gob.isem.sistematizacion.biometrico.utilidades.FuncionesRepetidas;
 import mx.gob.isem.sistematizacion.biometrico.utilidades.FuncionesRepetidas.*;
 import mx.gob.isem.sistematizacion.biometrico.vistas.VistaPrincipal;
+import mx.gob.isem.sistematizacion.biometrico.ws.ClienteSistematizacionWS;
 import mx.gob.isem.sistematizacion.biometrico.ws.cliente.BiometricosPortType;
 import mx.gob.isem.sistematizacion.biometrico.ws.cliente.ConsultarEmpleadosCambiosRequest;
 import mx.gob.isem.sistematizacion.biometrico.ws.cliente.ConsultarEmpleadosCambiosResponse;
@@ -42,18 +46,18 @@ public class EmpleadoControlador {
 	private EmpleadoBiometricoDAO empleadoBiometricoDao;
 	private EmpleadoDAO empleadoDao;
 	private HuellaDAO huellaDao;
-	private BiometricosPortType servicio;
+	private ClienteSistematizacionWS clienteWS;
 	private ObjectFactory factory;
 	
-	public EmpleadoControlador (VistaPrincipal vista, List<InstanciaBiometrico> dispostivos, BiometricosPortType servicio) {
+	public EmpleadoControlador (VistaPrincipal vista, List<InstanciaBiometrico> dispositivos, ClienteSistematizacionWS clienteWS) {
 		this.vista = vista;
-		this.dispositivos = dispostivos;
+		this.dispositivos = dispositivos;
 		this.biometricoDao = new BiometricoDAO();
 		this.configuracionDao = new ConfiguracionDAO();
 		this.empleadoBiometricoDao = new EmpleadoBiometricoDAO();
 		this.empleadoDao = new EmpleadoDAO();
 		this.huellaDao = new HuellaDAO();
-		this.servicio = servicio;
+		this.clienteWS = clienteWS;
 		this.factory = new ObjectFactory();
 		inicializarEventos();
 		refrescarTabla();
@@ -215,23 +219,43 @@ public class EmpleadoControlador {
                 request.setCentro(configuracionDao.consultarConfiguracion().getCentro());
                 request.setEmpleados(empleados); 	        
                 // Consumimos el Web Service
+                BiometricosPortType servicio = clienteWS.obtenerPuerto();
                 ConsultarEmpleadosCambiosResponse response = servicio.consultarEmpleadosCambios(request);
-                
-                modificarEmpleadosLocal(response);
-                exito = true;             
-	        } catch (Exception e) {
-	            System.err.println("Error de red al conectar con el servidor central: " + e.getMessage());
+            	modificarEmpleadosLocal(response);
+                exito = true;                                          
+	        } catch (SOAPFaultException soapEx) {
+	    		// Error en las credenciales de la API
+	    		// Checar en la Base de datos local
+	    		SwingUtilities.invokeLater(() -> {
+		    		JOptionPane.showMessageDialog(vista, 
+	                        "Fallo en descarga de catálogo:\nAcceso Denegado por el Servidor Central.\nRevise las credenciales de conexión en la configuración.", 
+	                        "Error de Credenciales", JOptionPane.ERROR_MESSAGE);
+	    		});
+	    		break;
+	    		
+	    	} catch (WebServiceException redEx) {
+	    		// Error al conectar con la red
 	            if (intentoActual < maxIntentos) {
-	                System.out.println("Reintentando en 5 minutos...");
+	            	SwingUtilities.invokeLater(() -> {
+	            		JOptionPane.showMessageDialog(vista, 
+		                        "Error en la conexión con el servidor. Intentando de nuevo en 1 minuto", 
+		                        "Error de Red", JOptionPane.ERROR_MESSAGE);
+		    		});
 	                try { 
 	                	Thread.sleep(TimeUnit.MINUTES.toMillis(1)); 
 	                } catch (InterruptedException ie) { 
 	                	Thread.currentThread().interrupt(); 
 	                	break; 
 	                }
-	            } 
-	        }
+	            } 	            
+	        } catch (Exception e) {
+                System.err.println("Error de lógica interna al procesar el catálogo de empleados: " + e.getMessage());
+                break;
+            }
 	    }
+	    if (!exito && intentoActual >= maxIntentos) {
+            System.err.println("Se alcanzó el límite máximo de intentos para descargar el catálogo de empleados. Quedará pendiente para mañana.");
+        }
 	}
 	
 	private void modificarEmpleadosLocal(ConsultarEmpleadosCambiosResponse response) {
