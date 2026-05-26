@@ -9,8 +9,7 @@ import java.util.Map;
 import javax.xml.ws.BindingProvider;
 import javax.xml.ws.handler.MessageContext;
 
-import mx.gob.isem.sistematizacion.biometrico.dao.ConfiguracionDAO;
-import mx.gob.isem.sistematizacion.biometrico.modelos.Configuracion;
+import mx.gob.isem.sistematizacion.biometrico.modelos.SesionSistema;
 import mx.gob.isem.sistematizacion.biometrico.ws.cliente.BiometricosPortType;
 import mx.gob.isem.sistematizacion.biometrico.ws.cliente.BiometricosService;
 
@@ -21,7 +20,7 @@ public class ClienteSistematizacionWS {
     public ClienteSistematizacionWS() {
         try {
             // Apuntamos al servidor central
-            URL urlServidor = new URL("http://localhost:8080/ws/biometricos?wsdl");
+            URL urlServidor = new URL("https://localhost:8443/ws/biometricos?wsdl");
             BiometricosService servicio = new BiometricosService(urlServidor);
             this.puerto = servicio.getBiometricosPort();                        
         } catch (Exception e) {
@@ -32,17 +31,16 @@ public class ClienteSistematizacionWS {
     // Exponemos el puerto para que lo usen los controladores
     public BiometricosPortType obtenerPuerto() {
         try {
-            // Consultamos la base de datos
-            ConfiguracionDAO configuracionDao = new ConfiguracionDAO();
-            Configuracion configuracion = configuracionDao.consultarConfiguracion();
-            // Inyectamos las credenciales actualizadas al puerto
+        	// Extraemos los datos de la variable global en RAM
+        	SesionSistema sesion = SesionSistema.getInstancia();
             Map<String, Object> reqContext = ((BindingProvider) puerto).getRequestContext();
             Map<String, List<String>> headers = new HashMap<>();
             
-            if (configuracion != null && configuracion.getUsuario() != null) {
-                headers.put("Usuario", Collections.singletonList(configuracion.getUsuario()));
-                headers.put("Password", Collections.singletonList(configuracion.getPassword()));
-            }       
+            // Inyectamos las credenciales en los headers
+            if (sesion.getCentro() != null && sesion.getHashPassword() != null) {
+                headers.put("Usuario", Collections.singletonList(sesion.getCentro()));
+                headers.put("Password", Collections.singletonList(sesion.getHashPassword()));
+            }
             reqContext.put(MessageContext.HTTP_REQUEST_HEADERS, headers);
         } catch (Exception e) {
             System.err.println("Error al refrescar credenciales de red: " + e.getMessage());

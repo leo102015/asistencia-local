@@ -13,8 +13,10 @@ import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
+import javax.swing.JPasswordField;
 import javax.swing.JTextField;
 import javax.swing.SwingConstants;
+import javax.swing.SwingUtilities;
 import javax.swing.SwingWorker;
 import javax.swing.Timer;
 import mx.gob.isem.sistematizacion.biometrico.InstanciaBiometrico;
@@ -238,5 +240,30 @@ public class GestorDialogosUI {
 	    worker.execute();
 	    dialogoEspera.setVisible(true);
 	    return resultadoEnrolamiento[0];
+	}
+	
+	public static String mostrarDialogoPassword(String nombreUnidad, String codigoCentro) {
+		JPanel panel = new JPanel(new BorderLayout(5, 5));
+		JPanel etiquetas = new JPanel(new GridLayout(2, 1, 2, 2));
+		etiquetas.add(new JLabel("Unidad " + codigoCentro + ": " + nombreUnidad));
+		etiquetas.add(new JLabel("Ingrese la clave de seguridad para la API central:"));
+		panel.add(etiquetas, BorderLayout.NORTH);
+
+		JPasswordField pf = new JPasswordField();
+		panel.add(pf, BorderLayout.CENTER);
+		
+		int option = JOptionPane.showConfirmDialog(null, panel, "Autenticación de Unidad (" + codigoCentro + ")", 
+				JOptionPane.OK_CANCEL_OPTION, JOptionPane.QUESTION_MESSAGE);
+		
+		if (option == JOptionPane.OK_OPTION) {
+			return new String(pf.getPassword());
+		}
+		return null;
+	}
+	
+	public static void mostrarErrorCritico(String mensaje) {
+		SwingUtilities.invokeLater(() -> {
+			JOptionPane.showMessageDialog(null, mensaje, "Error Crítico de Sistema", JOptionPane.ERROR_MESSAGE);
+		});
 	}
 }

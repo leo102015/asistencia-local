@@ -30,6 +30,14 @@ public class ObjectFactory {
     }
 
     /**
+     * Create an instance of {@link ProbarConexionResponse }
+     * 
+     */
+    public ProbarConexionResponse createProbarConexionResponse() {
+        return new ProbarConexionResponse();
+    }
+
+    /**
      * Create an instance of {@link SincronizarAsistenciasResponse }
      * 
      */
@@ -75,6 +83,14 @@ public class ObjectFactory {
      */
     public ListaEmpleados createListaEmpleados() {
         return new ListaEmpleados();
+    }
+
+    /**
+     * Create an instance of {@link ProbarConexionRequest }
+     * 
+     */
+    public ProbarConexionRequest createProbarConexionRequest() {
+        return new ProbarConexionRequest();
     }
 
     /**

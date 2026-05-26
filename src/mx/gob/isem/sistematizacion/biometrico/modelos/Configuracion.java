@@ -3,16 +3,12 @@ package mx.gob.isem.sistematizacion.biometrico.modelos;
 public class Configuracion {
 	private String centro;
 	private String nombre;
-	private String usuario;
-	private String password;
 	
 	public Configuracion() {}
 	
-	public Configuracion(String centro, String nombre, String usuario, String password) {
+	public Configuracion(String centro, String nombre) {
 		this.centro = centro;
 		this.nombre = nombre;
-		this.usuario = usuario;
-		this.password = password;
 	}
 
 	public String getCentro() {
@@ -29,22 +25,6 @@ public class Configuracion {
 
 	public void setNombre(String nombre) {
 		this.nombre = nombre;
-	}
-	
-	public String getUsuario() {
-		return usuario;
-	}
-
-	public void setUsuario(String usuario) {
-		this.usuario = usuario;
-	}
-	
-	public String getPassword() {
-		return password;
-	}
-
-	public void setPassword(String password) {
-		this.password = password;
 	}
 
 	@Override

@@ -19,8 +19,6 @@ public class ConfiguracionDAO {
 			while(rs.next()) {
 				configuracion.setCentro(rs.getString("Centro"));
 				configuracion.setNombre(rs.getString("Nombre"));
-				configuracion.setUsuario(rs.getString("Usuario"));
-				configuracion.setPassword(rs.getString("Password"));
 			}
 		} catch (Exception e) {
 			System.err.println("Error al consultar configuracion en la BD: "+e.getMessage());

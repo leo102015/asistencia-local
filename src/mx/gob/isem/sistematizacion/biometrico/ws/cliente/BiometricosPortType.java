@@ -28,6 +28,32 @@ public interface BiometricosPortType {
      * 
      * @param parameters
      * @return
+     *     returns mx.gob.isem.sistematizacion.biometrico.cliente.ProbarConexionResponse
+     */
+    @WebMethod(action = "http://ws.biometrico.central.isem.gob.mx/probarConexion")
+    @WebResult(name = "ProbarConexionResponse", targetNamespace = "http://ws.biometrico.central.isem.gob.mx/", partName = "parameters")
+    @Action(input = "http://ws.biometrico.central.isem.gob.mx/probarConexion", output = "http://ws.biometrico.central.isem.gob.mx/BiometricosPortType/probarConexionResponse")
+    public ProbarConexionResponse probarConexion(
+        @WebParam(name = "ProbarConexionRequest", targetNamespace = "http://ws.biometrico.central.isem.gob.mx/", partName = "parameters")
+        ProbarConexionRequest parameters);
+
+    /**
+     * 
+     * @param parameters
+     * @return
+     *     returns mx.gob.isem.sistematizacion.biometrico.cliente.SincronizarHuellaResponse
+     */
+    @WebMethod(action = "http://ws.biometrico.central.isem.gob.mx/sincronizarHuella")
+    @WebResult(name = "SincronizarHuellaResponse", targetNamespace = "http://ws.biometrico.central.isem.gob.mx/", partName = "parameters")
+    @Action(input = "http://ws.biometrico.central.isem.gob.mx/sincronizarHuella", output = "http://ws.biometrico.central.isem.gob.mx/BiometricosPortType/sincronizarHuellaResponse")
+    public SincronizarHuellaResponse sincronizarHuella(
+        @WebParam(name = "SincronizarHuellaRequest", targetNamespace = "http://ws.biometrico.central.isem.gob.mx/", partName = "parameters")
+        SincronizarHuellaRequest parameters);
+
+    /**
+     * 
+     * @param parameters
+     * @return
      *     returns mx.gob.isem.sistematizacion.biometrico.cliente.SincronizarAsistenciasResponse
      */
     @WebMethod(action = "http://ws.biometrico.central.isem.gob.mx/sincronizarAsistencias")
@@ -49,18 +75,5 @@ public interface BiometricosPortType {
     public ConsultarEmpleadosCambiosResponse consultarEmpleadosCambios(
         @WebParam(name = "ConsultarEmpleadosCambiosRequest", targetNamespace = "http://ws.biometrico.central.isem.gob.mx/", partName = "parameters")
         ConsultarEmpleadosCambiosRequest parameters);
-
-    /**
-     * 
-     * @param parameters
-     * @return
-     *     returns mx.gob.isem.sistematizacion.biometrico.cliente.SincronizarHuellaResponse
-     */
-    @WebMethod(action = "http://ws.biometrico.central.isem.gob.mx/sincronizarHuella")
-    @WebResult(name = "SincronizarHuellaResponse", targetNamespace = "http://ws.biometrico.central.isem.gob.mx/", partName = "parameters")
-    @Action(input = "http://ws.biometrico.central.isem.gob.mx/sincronizarHuella", output = "http://ws.biometrico.central.isem.gob.mx/BiometricosPortType/sincronizarHuellaResponse")
-    public SincronizarHuellaResponse sincronizarHuella(
-        @WebParam(name = "SincronizarHuellaRequest", targetNamespace = "http://ws.biometrico.central.isem.gob.mx/", partName = "parameters")
-        SincronizarHuellaRequest parameters);
 
 }
